@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notes_app/core/styles_manager.dart';
-import 'package:notes_app/features/home/cubit/note_cubit.dart';
-import 'package:notes_app/features/home/cubit/note_states.dart';
+import 'package:notes_app/features/home/cubit/home_cubit.dart';
+import 'package:notes_app/features/home/cubit/home_states.dart';
 import 'package:notes_app/features/home/models/icon_button_model.dart';
 import 'package:notes_app/features/home/widgets/custom_icon_button.dart';
 
@@ -28,7 +28,7 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Scaffold(
         body: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: BlocBuilder<NoteCubit, NoteStates>(
+          child: BlocBuilder<HomeCubit, HomeStates>(
             builder: (context, state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -54,8 +54,10 @@ class _EditorScreenState extends State<EditorScreen> {
                       iconButtonModel: IconButtonModel(
                         icon: Icons.save_as_outlined,
                         onPressed: () {
-                          context.read<NoteCubit>().addNote(controller.text);
-                          controller.clear();
+                          if(controller.text.isNotEmpty) {
+                            context.read<HomeCubit>().addNote(controller.text);
+                            controller.clear();
+                          }
                         },
                       ),
                     ),

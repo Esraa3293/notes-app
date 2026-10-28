@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notes_app/core/colors_manager.dart';
 import 'package:notes_app/core/styles_manager.dart';
-import 'package:notes_app/features/home/cubit/note_cubit.dart';
-import 'package:notes_app/features/home/cubit/note_states.dart';
+import 'package:notes_app/features/home/cubit/home_cubit.dart';
+import 'package:notes_app/features/home/cubit/home_states.dart';
 import 'package:notes_app/features/home/models/icon_button_model.dart';
 import 'package:notes_app/features/home/models/note_model.dart';
 import 'package:notes_app/features/home/widgets/custom_icon_button.dart';
 import 'package:notes_app/features/home/widgets/notes_item.dart';
 
-class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   List<Color> noteColors = [
     ColorsManager.secondaryColor,
     ColorsManager.tertiaryColor,
@@ -21,27 +26,32 @@ class HomeScreen extends StatelessWidget {
     ColorsManager.shadowColor,
   ];
 
-  // bool isAdded = true;
+  @override
+  void initState() {
+    super.initState();
+    BlocProvider.of<HomeCubit>(context).getNotes();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
         body: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: BlocConsumer<NoteCubit, NoteStates>(
+          child: BlocConsumer<HomeCubit, HomeStates>(
             listener: (context, state) {
-              if (state is NoteAddState) {
+              if (state is HomeSuccessState) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text("Note Added"),
+                    content: Text('Note Added'),
                     backgroundColor: Colors.green,
                   ),
                 );
               }
-              if (state is NoteRemoveState) {
+              if (state is HomeErrorState) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text("Note Removed"),
+                    content: Text(state.message),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -69,36 +79,42 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
                 Expanded(
-                  child: ListView.separated(
-                    itemBuilder: (context, index) => Dismissible(
-                      key: UniqueKey(),
-                      onDismissed: (direction) {
-                        context.read<NoteCubit>().removeNote(index);
-                      },
-                      background: Container(
-                        width: 500,
-                        height: 157,
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.delete,
-                          size: 30,
-                          color: Colors.white,
-                        ),
-                      ),
-                      child: NotesItem(
-                        noteModel: NoteModel(
-                          content: state.notes[index],
-                          color: noteColors[index % noteColors.length],
-                        ),
-                      ),
-                    ),
-                    separatorBuilder: (context, index) =>
-                        Divider(color: Colors.transparent),
-                    itemCount: state.notes.length,
-                  ),
+                  child: state is HomeLoadingState
+                      ? Center(child: CircularProgressIndicator())
+                      : state is HomeDataLoadedState
+                      ? ListView.separated(
+                          itemBuilder: (context, index) => Dismissible(
+                            key: UniqueKey(),
+                            onDismissed: (direction) {
+                              context.read<HomeCubit>().removeNote(index);
+                            },
+                            background: Container(
+                              width: 500,
+                              height: 157,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.delete,
+                                size: 30,
+                                color: Colors.white,
+                              ),
+                            ),
+                            child: NotesItem(
+                              noteModel: NoteModel(
+                                content: state.notes[index],
+                                color: noteColors[index % noteColors.length],
+                              ),
+                            ),
+                          ),
+                          separatorBuilder: (context, index) =>
+                              Divider(color: Colors.transparent),
+                          itemCount: state.notes.length,
+                        )
+                      : state is HomeErrorState
+                      ? Center(child: Text(state.message))
+                      : SizedBox(),
                 ),
               ],
             ),
@@ -108,12 +124,6 @@ class HomeScreen extends StatelessWidget {
           shape: CircleBorder(),
           onPressed: () {
             Navigator.pushNamed(context, "editor");
-            // final result = await Navigator.pushNamed(context, "editor");
-            // if (result != null && result is String && result.trim().isNotEmpty) {
-            //   if (context.mounted) {
-            //     context.read<NoteCubit>().addNote(result);
-            //   }
-            // }
           },
           backgroundColor: Colors.white,
           child: Icon(Icons.add, color: Colors.black, size: 30),
